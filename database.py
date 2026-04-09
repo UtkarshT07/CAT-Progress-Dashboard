@@ -29,8 +29,13 @@ SQLITE_PATH = Path("cat_prep.db")
 def _get_pg_conn():
     import streamlit as st
     import psycopg2
-    return psycopg2.connect(st.secrets["DATABASE_URL"], sslmode="require")
-
+    
+    db_url = st.secrets["DATABASE_URL"]
+    
+    if "sslmode" not in db_url:
+        db_url += "?sslmode=require"
+    
+    return psycopg2.connect(db_url)
 
 def _get_sqlite_conn():
     conn = sqlite3.connect(SQLITE_PATH, check_same_thread=False)

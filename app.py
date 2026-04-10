@@ -30,6 +30,13 @@ from ui_components import (
 )
 from cat_structure import ALL_SECTIONS, get_topics_for_section
 
+# ── API Key helper ─────────────────────────────────────────────────────────────
+def get_api_key() -> str:
+    try:
+        return st.secrets["OPENAI_API_KEY"]
+    except (KeyError, FileNotFoundError):
+        st.error("OpenAI API key not found in secrets.")
+        st.stop()
 
 # ── Page config ───────────────────────────────────────────────────────────────
 st.set_page_config(
@@ -62,8 +69,6 @@ initialize_db()
 
 
 # ── Session state ─────────────────────────────────────────────────────────────
-if "api_key" not in st.session_state:
-    st.session_state["api_key"] = ""
 if "suggestions_cache" not in st.session_state:
     st.session_state["suggestions_cache"] = None
 if "last_parsed" not in st.session_state:
@@ -76,19 +81,6 @@ if "last_parsed" not in st.session_state:
 
 with st.sidebar:
     st.markdown("# 🎯 CAT Prep")
-    st.markdown("---")
-
-    # API Key
-    st.markdown("### 🔑 OpenAI API Key")
-    api_key_input = st.text_input(
-        "Enter your key",
-        type="password",
-        value=st.session_state["api_key"],
-        help="Your key stays in memory only — never stored.",
-    )
-    if api_key_input:
-        st.session_state["api_key"] = api_key_input
-
     st.markdown("---")
 
     # ── Log Input ────────────────────────────────────────────────────────────
@@ -428,27 +420,23 @@ with tabs[3]:
 # ─── Tab 5: AI Coach ──────────────────────────────────────────────────────────
 with tabs[4]:
     st.markdown("## 🤖 AI Study Coach")
+    if st.button("🔄 Generate Fresh Suggestions", type="primary"):
+        with st.spinner("Consulting AI coach..."):
+            suggestions = generate_suggestions(
+                get_api_key(),
+                df_all,
+                readiness,
+                time_est,
+            )
+            st.session_state["suggestions_cache"] = suggestions
 
-    if not st.session_state["api_key"]:
-        st.warning("Enter your OpenAI API key in the sidebar to activate the AI Coach.")
-    else:
-        if st.button("🔄 Generate Fresh Suggestions", type="primary"):
-            with st.spinner("Consulting AI coach..."):
-                suggestions = generate_suggestions(
-                    st.session_state["api_key"],
-                    df_all,
-                    readiness,
-                    time_est,
-                )
-                st.session_state["suggestions_cache"] = suggestions
-
-        if st.session_state["suggestions_cache"]:
+    if st.session_state["suggestions_cache"]:
             if "error" in st.session_state["suggestions_cache"]:
                 st.error(
                     f"AI error: {st.session_state['suggestions_cache']['error']}"
                 )
             render_suggestions(st.session_state["suggestions_cache"])
-        else:
+    else:
             st.info(
                 "Click **Generate Fresh Suggestions** to get personalized "
                 "coaching based on your logs."

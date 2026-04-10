@@ -55,6 +55,26 @@ def initialize_db():
     if USE_POSTGRES:
         conn = _get_pg_conn()
         cursor = conn.cursor()
+
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS logs (
+                id                  SERIAL PRIMARY KEY,
+                date                TEXT NOT NULL,
+                section             TEXT NOT NULL,
+                topic               TEXT NOT NULL,
+                subtopic            TEXT,
+                activity_type       TEXT DEFAULT 'practice',
+                questions_attempted INTEGER DEFAULT 0,
+                sets_attempted      INTEGER DEFAULT 0,
+                correct_answers     INTEGER DEFAULT 0,
+                correct_sets        INTEGER DEFAULT 0,
+                time_taken_minutes  REAL DEFAULT 0,
+                sentiment           TEXT DEFAULT 'medium',
+                raw_input           TEXT,
+                created_at          TIMESTAMP DEFAULT NOW()
+            )
+        """)
+
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS readiness_snapshots (
                 id                SERIAL PRIMARY KEY,
@@ -66,23 +86,15 @@ def initialize_db():
                 consistency_score REAL
             )
         """)
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS readiness_snapshots (
-                id                INTEGER SERIAL PRIMARY KEY,
-                date              TEXT NOT NULL UNIQUE,
-                readiness_score   REAL,
-                accuracy_score    REAL,
-                speed_score       REAL,
-                coverage_score    REAL,
-                consistency_score REAL
-            )
-        """)
+
         conn.commit()
+        cursor.close()
         conn.close()
+
     else:
-        # Original SQLite schema — unchanged
         conn = _get_sqlite_conn()
         cursor = conn.cursor()
+
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS logs (
                 id                  INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -101,6 +113,7 @@ def initialize_db():
                 created_at          TEXT DEFAULT (datetime('now'))
             )
         """)
+
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS readiness_snapshots (
                 id                INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -112,7 +125,9 @@ def initialize_db():
                 consistency_score REAL
             )
         """)
+
         conn.commit()
+        cursor.close()
         conn.close()
 
 
